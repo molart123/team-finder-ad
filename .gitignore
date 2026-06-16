@@ -1,4 +1,4 @@
-/team_finder/media/
+/backend/team_finder/media/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -112,7 +112,7 @@ celerybeat-schedule
 celerybeat.pid
 
 # Environments
-.env
+backend/.env
 .envrc
 .venv
 env/
