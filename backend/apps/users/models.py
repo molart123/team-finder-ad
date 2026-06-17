@@ -38,8 +38,9 @@ class User(AbstractUser):
         blank=True,
     )
 
-    def __str__(self):
-        return f'{self.name} {self.surname}'
+    class Meta:
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
 
     def generate_avatar(self):
         if self.avatar:
@@ -74,3 +75,8 @@ class User(AbstractUser):
             super().save(update_fields=['avatar'])
         else:
             super().save(*args, **kwargs)
+
+
+
+    def __str__(self):
+        return f'{self.name} {self.surname}'
