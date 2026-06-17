@@ -4,10 +4,33 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import User
 from .forms import RegisterForm, LoginForm, UpdateForm, CustomPasswordChangeForm
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from .models import User
+
 
 def users_list(request):
-    users = User.objects.all()
-    return render(request, 'users/participants.html', {'users': users})
+    users = User.objects.all().order_by('id')
+    filter_type = request.GET.get('filter')
+
+    if request.user.is_authenticated and filter_type:
+        if filter_type == 'owners-of-favorite-projects':
+            # Авторы избранных проектов
+            users = User.objects.filter(owned_projects__in=request.user.favorites_projects.all()).distinct()
+        elif filter_type == 'owners-of-participating-projects':
+            # Авторы проектов, в которых я участвую
+            users = User.objects.filter(owned_projects__in=request.user.participated_projects.all()).distinct()
+        elif filter_type == 'interested-in-my-projects':
+            # Пользователи, которым нравятся мои проекты
+            users = User.objects.filter(favorites_projects__in=request.user.owned_projects.all()).distinct()
+        elif filter_type == 'participants-of-my-projects':
+            # Участники моих проектов
+            users = User.objects.filter(participated_projects__in=request.user.owned_projects.all()).distinct()
+
+    return render(request, 'users/participants.html', {
+        'participants': users,
+        'active_filter': filter_type if request.user.is_authenticated else None
+    })
 
 
 def users_register(request):
