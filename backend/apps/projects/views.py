@@ -61,11 +61,28 @@ def complete_project(request, id):
 @login_required
 def toggle_participate(request, id):
     project = get_object_or_404(Project, id=id)
-    if request.user in project.participants.all():
-        project.participants.remove(request.user)
+    user = request.user
+
+    if user in project.participants.all():
+        project.participants.remove(user)
+        is_participating = False
     else:
-        project.participants.add(request.user)
-    return redirect('projects:detail', id=project.id)
+        project.participants.add(user)
+        is_participating = True
+
+    # Формируем данные для ответа
+    data = {
+        'status': 'ok',
+        'is_participating': is_participating,
+        'participant': {
+            'id': user.id,
+            'name': user.name,
+            'surname': user.surname,
+            'avatar': user.avatar.url if user.avatar else None
+        } if is_participating else None,
+        'participants_count': project.participants.count()
+    }
+    return JsonResponse(data)
 
 
 @login_required
