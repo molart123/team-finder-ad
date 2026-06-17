@@ -14,14 +14,13 @@ class User(AbstractUser):
     email = models.EmailField(unique=True, verbose_name="Электронная почта")
     name = models.CharField(max_length=124, verbose_name="Имя")
     surname = models.CharField(max_length=124, verbose_name="Фамилия")
-    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, verbose_name="Аватар")
+    avatar = models.ImageField(upload_to='avatars/', verbose_name="Аватар")
     phone = models.CharField(max_length=12, unique=True, blank=True, null=True, verbose_name="Телефон")
     github_url = models.URLField(blank=True, null=True, verbose_name="GitHub")
     about = models.TextField(max_length=256, blank=True, null=True, verbose_name="О себе")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
     is_staff = models.BooleanField(default=False, verbose_name="Администратор")
 
-    # Избранные проекты (вариант 1)
     favorites = models.ManyToManyField(
         'projects.Project',
         blank=True,
@@ -29,7 +28,6 @@ class User(AbstractUser):
         verbose_name="Избранные проекты"
     )
 
-    # Чтобы избежать конфликтов с auth.User
     groups = models.ManyToManyField(
         'auth.Group',
         related_name='users_user_groups',

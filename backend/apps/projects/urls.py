@@ -4,8 +4,8 @@ from . import views
 app_name = 'projects'
 
 urlpatterns = [
-    path('', views.project_list, name='list'),  # /projects/
-    path('project/list/', views.project_list, name='list_full'),  # /projects/project/list/
+    path('', views.project_list, name='list'),
+    path('project/list/', views.project_list, name='list_full'),
     path('projects/<int:pk>/', views.project_detail, name='detail'),
     path('projects/create/', views.create_project, name='create'),
     path('projects/<int:pk>/edit/', views.edit_project, name='edit'),

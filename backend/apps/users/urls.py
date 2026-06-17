@@ -5,7 +5,7 @@ app_name = 'users'
 
 urlpatterns = [
     path('list/', views.users_list, name='list'),
-    path('<int:pk>/', views.user_detail, name='detail'),
+    path('<int:pk>/', views.user_detail, name='detail'),   # <-- int:pk вместо '/'
     path('register/', views.users_register, name='register'),
     path('login/', views.users_login, name='login'),
     path('logout/', views.users_logout, name='logout'),
