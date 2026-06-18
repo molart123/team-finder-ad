@@ -1,10 +1,10 @@
 from pathlib import Path
+
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 ROOT_DIR = BASE_DIR.resolve().parent
 
-# .env должен быть заполнен в соответствии с .env_example
 SECRET_KEY = config("DJANGO_SECRET_KEY")
 DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
 ALLOWED_HOSTS = config("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
@@ -20,7 +20,7 @@ INSTALLED_APPS = [
     "apps.projects",
 ]
 
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = "users.User"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -38,7 +38,7 @@ TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [
-            ROOT_DIR / f"frontend/templates/templates_var{config('TASK_VERSION', default='1')}"
+            ROOT_DIR / "frontend/templates/templates_var1",
         ],
         "APP_DIRS": True,
         "OPTIONS": {
@@ -46,7 +46,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "django.template.context_processors.csrf",   # обязательно для работы CSRF
+                "django.template.context_processors.csrf",
             ],
         },
     },
@@ -67,25 +67,26 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = []
 if not DEBUG:
-    AUTH_PASSWORD_VALIDATORS.extend([
-        {
-            "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-        },
-        {
-            "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-        },
-        {
-            "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-        },
-        {
-            "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-        },
-    ])
+    AUTH_PASSWORD_VALIDATORS.extend(
+        [
+            {
+                "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+            },
+            {
+                "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+            },
+            {
+                "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+            },
+            {
+                "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+            },
+        ]
+    )
 
-LANGUAGE_CODE = 'ru-ru'
-TIME_ZONE = 'Europe/Moscow'
+LANGUAGE_CODE = "ru-RU"
+TIME_ZONE = "Europe/Moscow"
 USE_I18N = True
-USE_L10N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
@@ -96,6 +97,6 @@ MEDIA_ROOT = ROOT_DIR / "frontend/media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-LOGIN_URL = '/users/login/'
-LOGIN_REDIRECT_URL = '/projects/list/'
-LOGOUT_REDIRECT_URL = '/projects/list/'
+LOGIN_URL = "users:login"
+LOGIN_REDIRECT_URL = "projects:list"
+LOGOUT_REDIRECT_URL = "projects:list"

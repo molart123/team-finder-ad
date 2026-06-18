@@ -1,34 +1,40 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
+from team_finder.constants import (
+    PROJECT_NAME_MAX_LENGTH,
+    PROJECT_STATUS_CHOICES,
+    PROJECT_STATUS_MAX_LENGTH,
+    PROJECT_STATUS_OPEN,
+)
 
 
 class Project(models.Model):
-    name = models.CharField(max_length=200, verbose_name="Название")
+    name = models.CharField(max_length=PROJECT_NAME_MAX_LENGTH, verbose_name="Название")
     description = models.TextField(blank=True, verbose_name="Описание")
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='owned_projects',   # <-- исправлено
-        verbose_name="Автор проекта"
+        related_name="owned_projects",
+        verbose_name="Автор проекта",
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     github_url = models.URLField(blank=True, null=True, verbose_name="GitHub")
     status = models.CharField(
-        max_length=6,
-        choices=[('open', 'Открыт'), ('closed', 'Закрыт')],
-        default='open',
-        verbose_name="Статус"
+        max_length=PROJECT_STATUS_MAX_LENGTH,
+        choices=PROJECT_STATUS_CHOICES,
+        default=PROJECT_STATUS_OPEN,
+        verbose_name="Статус",
     )
     participants = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         blank=True,
-        related_name='participated_projects',   # правильно
-        verbose_name="Участники"
+        related_name="participated_projects",
+        verbose_name="Участники",
     )
 
     class Meta:
-        verbose_name = 'Проект'
-        verbose_name_plural = 'Проекты'
+        verbose_name = "Проект"
+        verbose_name_plural = "Проекты"
 
     def __str__(self):
         return self.name

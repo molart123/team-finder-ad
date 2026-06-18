@@ -1,16 +1,20 @@
 from django import forms
+from team_finder.constants import PROJECT_NAME_MAX_LENGTH
+
+from ..common.mixins import GitHubValidationMixin
 from .models import Project
 
-class ProjectForm(forms.ModelForm):
+
+class ProjectForm(GitHubValidationMixin, forms.ModelForm):
     class Meta:
         model = Project
-        fields = ['name', 'description', 'github_url', 'status']
+        fields = ["name", "description", "github_url", "status"]
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 4}),
+            "description": forms.Textarea(attrs={"rows": 4}),
         }
 
-    def clean_github_url(self):
-        url = self.cleaned_data.get('github_url')
-        if url and not url.startswith('https://github.com/'):
-            raise forms.ValidationError('Ссылка должна вести на github.com')
-        return url
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Явно задаём max_length для поля name из константы,
+        # чтобы видеть использование констант в форме
+        self.fields["name"].max_length = PROJECT_NAME_MAX_LENGTH

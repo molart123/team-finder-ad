@@ -1,7 +1,8 @@
+import json
+
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
-import json
 
 from .forms import ProjectForm
 from .models import Project

@@ -1,61 +1,78 @@
+import logging
+
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from team_finder.constants import (
+    PROJECT_PAGINATE_BY,
+    PROJECT_STATUS_CLOSED,
+    PROJECT_STATUS_OPEN,
+)
+
+from ..common.services import paginate_queryset
 from .forms import ProjectForm
 from .models import Project
 
+logger = logging.getLogger(__name__)
 
-from django.core.paginator import Paginator
-from django.shortcuts import render
 
 def project_list(request):
-    projects_list = Project.objects.filter(status='open').order_by('-created_at')
-    paginator = Paginator(projects_list, 12)  # 12 проектов на страницу
-    page_number = request.GET.get('page')
-    projects = paginator.get_page(page_number)
-    return render(request, 'projects/project_list.html', {'projects': projects})
+
+    projects_qs = (
+        Project.objects.filter(status=PROJECT_STATUS_OPEN)
+        .select_related("owner")
+        .prefetch_related("participants")  # если нужны сами участники
+        .annotate(participants_count=Count("participants"))
+        .order_by("-created_at")
+    )
+    projects = paginate_queryset(
+        projects_qs, request.GET.get("page"), PROJECT_PAGINATE_BY
+    )
+    return render(request, "projects/project_list.html", {"projects": projects})
 
 
 def project_detail(request, id):
     project = get_object_or_404(Project, id=id)
-    return render(request, 'projects/project-details.html', {'project': project})
+    return render(request, "projects/project-details.html", {"project": project})
 
 
 @login_required
 def create_project(request):
-    if request.method == 'POST':
-        form = ProjectForm(request.POST)
-        if form.is_valid():
-            project = form.save(commit=False)
-            project.owner = request.user
-            project.save()
-            project.participants.add(request.user)
-            return redirect('projects:detail', id=project.id)
-    else:
-        form = ProjectForm()
-    return render(request, 'projects/create-project.html', {'form': form, 'is_edit': False})
+    # Убрана проверка request.method – форма инициализируется всегда,
+    # валидация запускается только при наличии POST-данных
+    form = ProjectForm(request.POST or None)
+    if form.is_valid():
+        project = form.save(commit=False)
+        project.owner = request.user
+        project.save()
+        project.participants.add(request.user)
+        return redirect("projects:detail", id=project.id)
+    return render(
+        request, "projects/create-project.html", {"form": form, "is_edit": False}
+    )
 
 
 @login_required
 def edit_project(request, id):
     project = get_object_or_404(Project, id=id, owner=request.user)
-    if request.method == 'POST':
-        form = ProjectForm(request.POST, instance=project)
-        if form.is_valid():
-            form.save()
-            return redirect('projects:detail', id=project.id)
-    else:
-        form = ProjectForm(instance=project)
-    return render(request, 'projects/create-project.html', {'form': form, 'is_edit': True})
+    form = ProjectForm(request.POST or None, instance=project)
+    if form.is_valid():
+        form.save()
+        return redirect("projects:detail", id=project.id)
+    return render(
+        request, "projects/create-project.html", {"form": form, "is_edit": True}
+    )
 
 
 @login_required
 def complete_project(request, id):
     project = get_object_or_404(Project, id=id, owner=request.user)
-    if project.status == 'open':
-        project.status = 'closed'
+    # Используем константы вместо строк
+    if project.status == PROJECT_STATUS_OPEN:
+        project.status = PROJECT_STATUS_CLOSED
         project.save()
-    return JsonResponse({'status': 'ok', 'project_status': project.status})
+    return JsonResponse({"status": "ok", "project_status": project.status})
 
 
 @login_required
@@ -63,24 +80,27 @@ def toggle_participate(request, id):
     project = get_object_or_404(Project, id=id)
     user = request.user
 
-    if user in project.participants.all():
+    # Используем .exists() вместо проверки через all()
+    is_participating = project.participants.filter(id=user.id).exists()
+
+    if is_participating:
         project.participants.remove(user)
-        is_participating = False
     else:
         project.participants.add(user)
-        is_participating = True
 
-    # Формируем данные для ответа
+    # avatar у пользователя обязателен – проверка не нужна
     data = {
-        'status': 'ok',
-        'is_participating': is_participating,
-        'participant': {
-            'id': user.id,
-            'name': user.name,
-            'surname': user.surname,
-            'avatar': user.avatar.url if user.avatar else None
-        } if is_participating else None,
-        'participants_count': project.participants.count()
+        "status": "ok",
+        "is_participating": not is_participating,  # инвертируем для нового состояния
+        "participant": {
+            "id": user.id,
+            "name": user.name,
+            "surname": user.surname,
+            "avatar": user.avatar.url,
+        }
+        if not is_participating  # добавляем, если пользователь только что присоединился
+        else None,
+        "participants_count": project.participants.count(),
     }
     return JsonResponse(data)
 
@@ -88,16 +108,23 @@ def toggle_participate(request, id):
 @login_required
 def toggle_favorite(request, id):
     project = get_object_or_404(Project, id=id)
-    if request.user in project.favorited_by.all():
+    # Используем .exists()
+    is_favorited = project.favorited_by.filter(id=request.user.id).exists()
+    if is_favorited:
         project.favorited_by.remove(request.user)
-        favorited = False
     else:
         project.favorited_by.add(request.user)
-        favorited = True
-    return JsonResponse({'status': 'ok', 'favorited': favorited})
+    return JsonResponse({"status": "ok", "favorited": not is_favorited})
 
 
 @login_required
 def favorites_list(request):
-    projects = request.user.favorites.all().order_by('-created_at')
-    return render(request, 'projects/favorite_projects.html', {'projects': projects})
+    # Оптимизация: select_related для владельца, prefetch_related для участников
+    # и annotate для подсчёта количества участников (избегаем N+1)
+    projects = (
+        request.user.favorites.select_related("owner")
+        .prefetch_related("participants")
+        .annotate(participants_count=Count("participants"))
+        .order_by("-created_at")
+    )
+    return render(request, "projects/favorite_projects.html", {"projects": projects})
