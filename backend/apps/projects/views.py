@@ -1,7 +1,6 @@
 import logging
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from team_finder.constants import (
@@ -18,17 +17,13 @@ logger = logging.getLogger(__name__)
 
 
 def project_list(request):
-
     projects_qs = (
         Project.objects.filter(status=PROJECT_STATUS_OPEN)
         .select_related("owner")
-        .prefetch_related("participants")  # если нужны сами участники
-        .annotate(participants_count=Count("participants"))
+        .prefetch_related("participants")
         .order_by("-created_at")
     )
-    projects = paginate_queryset(
-        projects_qs, request.GET.get("page"), PROJECT_PAGINATE_BY
-    )
+    projects = paginate_queryset(projects_qs, request, PROJECT_PAGINATE_BY)
     return render(request, "projects/project_list.html", {"projects": projects})
 
 
@@ -39,8 +34,6 @@ def project_detail(request, id):
 
 @login_required
 def create_project(request):
-    # Убрана проверка request.method – форма инициализируется всегда,
-    # валидация запускается только при наличии POST-данных
     form = ProjectForm(request.POST or None)
     if form.is_valid():
         project = form.save(commit=False)
@@ -68,7 +61,6 @@ def edit_project(request, id):
 @login_required
 def complete_project(request, id):
     project = get_object_or_404(Project, id=id, owner=request.user)
-    # Используем константы вместо строк
     if project.status == PROJECT_STATUS_OPEN:
         project.status = PROJECT_STATUS_CLOSED
         project.save()
@@ -80,7 +72,6 @@ def toggle_participate(request, id):
     project = get_object_or_404(Project, id=id)
     user = request.user
 
-    # Используем .exists() вместо проверки через all()
     is_participating = project.participants.filter(id=user.id).exists()
 
     if is_participating:
@@ -88,17 +79,16 @@ def toggle_participate(request, id):
     else:
         project.participants.add(user)
 
-    # avatar у пользователя обязателен – проверка не нужна
     data = {
         "status": "ok",
-        "is_participating": not is_participating,  # инвертируем для нового состояния
+        "is_participating": not is_participating,
         "participant": {
             "id": user.id,
             "name": user.name,
             "surname": user.surname,
             "avatar": user.avatar.url,
         }
-        if not is_participating  # добавляем, если пользователь только что присоединился
+        if not is_participating
         else None,
         "participants_count": project.participants.count(),
     }
@@ -108,7 +98,6 @@ def toggle_participate(request, id):
 @login_required
 def toggle_favorite(request, id):
     project = get_object_or_404(Project, id=id)
-    # Используем .exists()
     is_favorited = project.favorited_by.filter(id=request.user.id).exists()
     if is_favorited:
         project.favorited_by.remove(request.user)
@@ -119,12 +108,9 @@ def toggle_favorite(request, id):
 
 @login_required
 def favorites_list(request):
-    # Оптимизация: select_related для владельца, prefetch_related для участников
-    # и annotate для подсчёта количества участников (избегаем N+1)
     projects = (
         request.user.favorites.select_related("owner")
         .prefetch_related("participants")
-        .annotate(participants_count=Count("participants"))
         .order_by("-created_at")
     )
     return render(request, "projects/favorite_projects.html", {"projects": projects})

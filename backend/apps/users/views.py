@@ -42,7 +42,7 @@ def users_list(request):
                 participated_projects__in=request.user.owned_projects.all()
             ).distinct()
 
-    users = paginate_queryset(users_qs, request.GET.get("page"), USERS_PAGINATE_BY)
+    users = paginate_queryset(users_qs, request, USERS_PAGINATE_BY)
 
     return render(
         request,
@@ -56,7 +56,7 @@ def users_list(request):
 
 def users_register(request):
     form = RegisterForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
+    if form.is_valid():
         user = User.objects.create_user(
             name=form.cleaned_data["name"],
             surname=form.cleaned_data["surname"],
@@ -70,15 +70,14 @@ def users_register(request):
 
 def users_login(request):
     form = LoginForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
+    if form.is_valid():
         email = form.cleaned_data["email"]
         password = form.cleaned_data["password"]
         user = authenticate(username=email, password=password)
         if user is not None:
             login(request, user)
             return redirect("projects:list")
-        else:
-            form.add_error(None, "Неверный email или пароль")
+        form.add_error(None, "Неверный email или пароль")
     return render(request, "users/login.html", {"form": form})
 
 
@@ -97,7 +96,7 @@ def profile_edit(request):
     form = UpdateForm(
         request.POST or None, request.FILES or None, instance=request.user
     )
-    if request.method == "POST" and form.is_valid():
+    if form.is_valid():
         form.save()
         return redirect("users:profile", id=request.user.id)
     return render(request, "users/edit_profile.html", {"form": form})
@@ -106,7 +105,7 @@ def profile_edit(request):
 @login_required
 def change_password(request):
     form = CustomPasswordChangeForm(request.user, request.POST or None)
-    if request.method == "POST" and form.is_valid():
+    if form.is_valid():
         user = form.save()
         update_session_auth_hash(request, user)
         return redirect("users:profile", id=request.user.id)

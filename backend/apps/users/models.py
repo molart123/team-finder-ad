@@ -57,7 +57,6 @@ class User(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["name", "surname"]
 
-    # Чтобы избежать конфликтов с группами и правами по умолчанию
     groups = models.ManyToManyField(
         "auth.Group",
         related_name="users_user_groups",
@@ -95,10 +94,9 @@ class User(AbstractUser):
         except Exception as e:
             logger.warning(
                 f"Не удалось загрузить шрифт по пути {font_path}: {e}. "
-                "Используется шрифт по умолчанию (буква может быть очень мелкой)."
+                "Используется встроенный шрифт с заданным размером."
             )
-            font = ImageFont.load_default()
-            # Для встроенного шрифта размер фиксирован, поэтому предупреждаем.
+            font = ImageFont.load_default(size=AVATAR_FONT_SIZE)
 
         # Центрируем букву
         bbox = draw.textbbox((0, 0), letter, font=font)
