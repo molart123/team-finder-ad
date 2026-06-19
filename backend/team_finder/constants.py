@@ -44,4 +44,4 @@ AVATAR_SIZE = 200
 AVATAR_TEXT_COLOR = "white"
 AVATAR_FONT_SIZE = 80
 
-AVATAR_FONT_PATH = "static/fonts/Neue_Haas_Grotesk_Display_Pro_75_Bold.otf"
+AVATAR_FONT_PATH = "../frontend/static/fonts/Neue_Haas_Grotesk_Display_Pro_75_Bold.otf"
