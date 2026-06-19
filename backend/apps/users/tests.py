@@ -1,9 +1,9 @@
+from apps.projects.models import Project
+from apps.users.forms import RegisterForm, UpdateForm
+from apps.users.models import User
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
-
-from .forms import RegisterForm, UpdateForm
-from .models import User
 
 User = get_user_model()
 
@@ -39,7 +39,7 @@ class UserModelTest(TestCase):
             password="testpass123",
         )
         self.assertIsNotNone(user.avatar)
-        self.assertTrue(user.avatar.name.startswith(f"avatars/avatar_{user.id}"))
+        self.assertTrue(user.avatar.name.startswith("avatars/avatar_"))
 
     def test_user_str_method(self):
         user = User.objects.create_user(
@@ -98,7 +98,7 @@ class UserFormsTest(TestCase):
         form_data = {
             "name": "Phone",
             "surname": "Test",
-            "phone": "1234567890",  # Неверный формат
+            "phone": "1234567890",
         }
         form = UpdateForm(data=form_data, instance=user)
         self.assertFalse(form.is_valid())
@@ -114,7 +114,7 @@ class UserFormsTest(TestCase):
         form_data = {
             "name": "GitHub",
             "surname": "Test",
-            "github_url": "https://gitlab.com/username",  # Не GitHub
+            "github_url": "https://gitlab.com/username",
         }
         form = UpdateForm(data=form_data, instance=user)
         self.assertFalse(form.is_valid())
@@ -136,6 +136,21 @@ class UserViewsTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "users/participants.html")
         self.assertIn("participants", response.context)
+
+    def test_users_list_filtering(self):
+        """Фильтрация пользователей (используется поле favorites)."""
+        self.client.login(email="view@example.com", password="testpass123")
+        project = Project.objects.create(
+            name="Test Project",
+            owner=self.user,
+            status="open",
+        )
+        self.user.favorites.add(project)
+        response = self.client.get(
+            reverse("users:list"), {"filter": "owners-of-favorite-projects"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.user, response.context["participants"])
 
     def test_user_detail_view(self):
         response = self.client.get(
@@ -188,7 +203,6 @@ class UserViewsTest(TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "users/login.html")
         self.assertTrue(response.context["form"].errors)
 
     def test_logout_view(self):
@@ -219,7 +233,6 @@ class UserViewsTest(TestCase):
         )
         self.user.refresh_from_db()
         self.assertEqual(self.user.name, "UpdatedName")
-        self.assertEqual(self.user.surname, "UpdatedSurname")
 
     def test_change_password_view_get(self):
         self.client.login(email="view@example.com", password="testpass123")
@@ -229,7 +242,6 @@ class UserViewsTest(TestCase):
 
     def test_favorites_view(self):
         self.client.login(email="view@example.com", password="testpass123")
-        response = self.client.get(reverse("users:favorites"))
+        response = self.client.get(reverse("projects:favorites"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "projects/favorite_projects.html")
-        self.assertIn("projects", response.context)

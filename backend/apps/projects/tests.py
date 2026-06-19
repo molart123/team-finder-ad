@@ -1,11 +1,10 @@
 import json
 
+from apps.projects.forms import ProjectForm
+from apps.projects.models import Project
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
-
-from .forms import ProjectForm
-from .models import Project
 
 User = get_user_model()
 
@@ -191,7 +190,6 @@ class ProjectViewsTest(TestCase):
         self.assertTrue(data["is_participating"])
         self.assertIn(self.user, self.project.participants.all())
 
-        # Выход
         response = self.client.post(
             reverse("projects:toggle_participate", kwargs={"id": self.project.id})
         )
@@ -209,13 +207,20 @@ class ProjectViewsTest(TestCase):
         data = json.loads(response.content)
         self.assertEqual(data["status"], "ok")
         self.assertTrue(data["favorited"])
-        self.assertIn(self.project, self.user.favorites_projects.all())
+        self.assertIn(self.project, self.user.favorites.all())
 
-        # Удаляем из избранного
         response = self.client.post(
             reverse("projects:toggle_favorite", kwargs={"id": self.project.id})
         )
         data = json.loads(response.content)
         self.assertEqual(data["status"], "ok")
         self.assertFalse(data["favorited"])
-        self.assertNotIn(self.project, self.user.favorites_projects.all())
+        self.assertNotIn(self.project, self.user.favorites.all())
+
+    def test_favorites_list_view(self):
+        self.client.login(email="view@example.com", password="testpass123")
+        self.user.favorites.add(self.project)
+        response = self.client.get(reverse("projects:favorites"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "projects/favorite_projects.html")
+        self.assertIn(self.project, response.context["projects"])
